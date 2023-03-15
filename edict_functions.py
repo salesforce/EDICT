@@ -115,7 +115,62 @@ def EDICT_editing(im_path,
                                  run_baseline=run_baseline)
     
     return gen
+
+
+def recon_test(im, steps=50, strength=1.0,
+               run_baseline=False, 
+               back_and_forth=False,
+               prompt='',
+              guidance_scale=7,
+              plot=False,
+              mix_weight=1):
+    """
+    Compute MSE Loss for images that are fully backed into latent space then decoded
+    MSE computed on pixels normalized to [-1, 1]
     
+    Args:
+        im: a PIL Image or image path
+        strength: How far to decode to 
+        run_baseline: DDIM if True, EDICT if False
+        prompt: Default is unconditional, this should work with baseline too. Conditional is differentiator
+        guidance_scale: classifier-free guidance scale. Default to widely accepted value for generation
+        mix_weight: Weight of mixing layers in EDICT
+    Output:
+        Single float of MSE for image and method
+    """
+    if isinstance(im, str): im = load_im_into_format_from_path(im) 
+    
+    latents = coupled_stablediffusion(prompt,
+                                   reverse=True,
+                                    init_image=im,
+                                    steps=steps,
+                                    init_image_strength=strength,
+                                    run_baseline=run_baseline,
+                                    back_and_forth=back_and_forth,
+                                    guidance_scale=guidance_scale,
+                                      mix_weight=mix_weight
+                                   )
+    if run_baseline:
+        latents = latents[0]
+    recon = coupled_stablediffusion(prompt,
+                                   reverse=False,
+                                    fixed_starting_latent=latents,
+                                    steps=steps,
+                                    init_image_strength=strength,
+                                    run_baseline=run_baseline,
+                                    back_and_forth=back_and_forth,
+                                    guidance_scale=guidance_scale,
+                                    mix_weight=mix_weight
+                                   )
+    recon = recon[0] if isinstance(recon, list) else recon
+
+    
+    orig_im_arr = im_to_np(im)
+    recon_im_arr = im_to_np(recon)
+    return np.square(orig_im_arr - recon_im_arr).mean()
+
+def im_to_np(im):
+    return np.array(im).astype(np.float64) / 255.0 * 2.0 - 1.0
 
 def img2img_editing(im_path,
                   edit_prompt,
