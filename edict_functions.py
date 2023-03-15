@@ -88,6 +88,8 @@ def EDICT_editing(im_path,
     Output:
         PAIR of Images (tuple)
         If run_baseline=True then [0] will be edit and [1] will be original
+            This is to maintain consistently structured outputs across function calls
+            The functions below will never operate on [1], leaving it unchanged
         If run_baseline=False then they will be two nearly identical edited versions
     """
     # Resize/center crop to 512x512 (Can do higher res. if desired)
